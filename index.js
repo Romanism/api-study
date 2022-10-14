@@ -1,11 +1,17 @@
+require('dotenv').config();
 const express = require('express');
 const app = express();
-// const MongoClient = require('mongodb').MongoClient;
+const MongoClient = require('mongodb').MongoClient;
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.listen(8080, function () {
-  console.log('listening on 8080');
+
+MongoClient.connect(process.env.DB_URL, function (err, client) {
+  db = client.db('RealWorld');
+
+  app.listen(8080, function () {
+    console.log('listening on 8080');
+  });
 });
 
 // ========== Main ========== //
@@ -118,120 +124,91 @@ app.delete('/api/profiles/:username/follow', function (request, response) {
 
 // ========== Article ========= //
 
-const articles = {
-  articles: [
-    {
-      slug: 'how-to-train-your-dragon',
-      title: 'How to train your dragon',
-      description: 'Ever wonder how?',
-      body: 'It takes a Jacobian',
-      tagList: ['dragons', 'training'],
-      createdAt: '2016-02-18T03:22:56.637Z',
-      updatedAt: '2016-02-18T03:48:35.824Z',
-      favorited: false,
-      favoritesCount: 0,
-      author: {
-        username: 'jake',
-        bio: 'I work at statefarm',
-        image: 'https://i.stack.imgur.com/xHWG8.jpg',
-        following: false,
-      },
-    },
-    {
-      slug: 'how-to-train-your-dragon-2',
-      title: 'How to train your dragon 2',
-      description: 'So toothless',
-      body: 'It a dragon',
-      tagList: ['dragons', 'training'],
-      createdAt: '2016-02-18T03:22:56.637Z',
-      updatedAt: '2016-02-18T03:48:35.824Z',
-      favorited: false,
-      favoritesCount: 0,
-      author: {
-        username: 'jake',
-        bio: 'I work at statefarm',
-        image: 'https://i.stack.imgur.com/xHWG8.jpg',
-        following: false,
-      },
-    },
-  ],
-  articlesCount: 2,
-};
-
-const article = {
-  article: {
-    slug: 'how-to-train-your-dragon',
-    title: 'How to train your dragon',
-    description: 'Ever wonder how?',
-    body: 'It takes a Jacobian',
-    tagList: ['dragons', 'training'],
-    createdAt: '2016-02-18T03:22:56.637Z',
-    updatedAt: '2016-02-18T03:48:35.824Z',
-    favorited: false,
-    favoritesCount: 0,
-    author: {
-      username: 'jake',
-      bio: 'I work at statefarm',
-      image: 'https://i.stack.imgur.com/xHWG8.jpg',
-      following: false,
-    },
-  },
-};
-
 /**
  * List Articles
  */
-app.get('/api/articles', function (request, response) {
-  response.send(articles);
+app.get('/api/articles', async (request, response) => {
+  try {
+    console.log(`Query : ${request.query}`);
+    const article = await db.collection('articles').find().toArray();
+    response.send({ result: article });
+  } catch (err) {
+    response.send(500);
+  }
 });
 
 /**
  * Feed Articles
  */
-app.get('/api/articles/feed', function (request, response) {
-  response.send(articles);
+app.get('/api/articles/feed', async (request, response) => {
+  try {
+    const article = await db.collection('articles').find().toArray();
+    response.send({ result: article });
+  } catch (err) {
+    response.send(500);
+  }
 });
 
 /**
  * Get Article
  */
-app.get('/api/articles/:slug', function (request, response) {
-  console.log(`Slug : ${request.params.slug}`);
-  response.send(article);
+app.get('/api/articles/:id', async (request, response) => {
+  try {
+    const id = Number(request.params.id);
+    const article = await db.collection('articles').findOne({ _id: id });
+    response.send({ result: article });
+  } catch (err) {
+    response.send(500);
+  }
 });
 
 /**
  * Create Article
  */
-app.post('/api/articles', function (request, response) {
-  const postArticle = request.body.article;
-  const createArticle = {
-    article: {
-      ...article.article,
-      ...postArticle,
-    },
-  };
-  response.send(createArticle);
+app.post('/api/articles', async (request, response) => {
+  try {
+    currentCount = await db.collection('count').findOne({ name: 'Post Count' });
+    const nextCount = currentCount.totalPost + 1;
+    const body = request.body.article;
+    const article = {
+      _id: nextCount,
+      article: body,
+    };
+    await db.collection('articles').insertOne(article);
+    await db.collection('count').updateOne({ name: 'Post Count' }, { $inc: { totalPost: 1 } });
+    response.send(article);
+  } catch (err) {
+    response.send(500);
+  }
 });
 
 /**
  * Update Article
  */
-app.put('/api/articles/:slug', function (request, response) {
-  console.log(`Slug : ${request.params.slug}`);
-  const updateArticle = {
-    article: {
-      ...article.article,
-      title: request.params.slug,
-    },
-  };
-  response.send(updateArticle);
+app.put('/api/articles/:id', async (request, response) => {
+  try {
+    const id = Number(request.params.id);
+    const body = request.body;
+    const article = {
+      _id: id,
+      article: body.article,
+    };
+    await db.collection('articles').findOneAndReplace({ _id: id }, article);
+    response.send(putArticle);
+  } catch (err) {
+    response.send(500);
+  }
 });
 
 /**
  * Delete Article
  */
-app.delete('/api/articles/:slug', function (request, response) {
-  console.log(`Slug : ${request.params.slug}`);
-  response.send('Success');
+app.delete('/api/articles/:id', async (request, response) => {
+  try {
+    const id = Number(request.params.id);
+    await db.collection('articles').findOneAndDelete({ _id: id });
+    response.send('Success');
+  } catch (err) {
+    response.send(500);
+  }
 });
