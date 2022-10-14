@@ -129,7 +129,7 @@ app.delete('/api/profiles/:username/follow', function (request, response) {
  */
 app.get('/api/articles', async (request, response) => {
   try {
-    console.log(`Query : ${request.query}`);
+    console.log(`Query : ${JSON.stringify(request.query)}`);
     const article = await db.collection('articles').find().toArray();
     response.send({ result: article });
   } catch (err) {
@@ -188,13 +188,14 @@ app.post('/api/articles', async (request, response) => {
 app.put('/api/articles/:id', async (request, response) => {
   try {
     const id = Number(request.params.id);
+    console.log(id);
     const body = request.body;
     const article = {
       _id: id,
       article: body.article,
     };
     await db.collection('articles').findOneAndReplace({ _id: id }, article);
-    response.send(putArticle);
+    response.send(article);
   } catch (err) {
     response.send(500);
   }
