@@ -150,12 +150,12 @@ app.get('/api/articles/feed', async (request, response) => {
 });
 
 /**
- * Get Article
+ * Get Article Slug
  */
-app.get('/api/articles/:id', async (request, response) => {
+app.get('/api/articles/:slug', async (request, response) => {
   try {
-    const id = Number(request.params.id);
-    const article = await db.collection('articles').findOne({ _id: id });
+    const slug = request.params.slug;
+    const article = await db.collection('articles').findOne({ 'article.slug': slug });
     response.send({ result: article });
   } catch (err) {
     response.send(500);
@@ -169,7 +169,15 @@ app.post('/api/articles', async (request, response) => {
   try {
     currentCount = await db.collection('count').findOne({ name: 'Post Count' });
     const nextCount = currentCount.totalPost + 1;
-    const body = request.body.article;
+    const receiveBody = request.body.article;
+    const body = {
+      slug: receiveBody.title.replaceAll(' ', '-'),
+      ...request.body.article,
+      createAt: new Date(),
+      updatedAt: new Date(),
+      favorited: false,
+      favoritesCount: 0,
+    };
     const article = {
       _id: nextCount,
       article: body,
@@ -185,16 +193,23 @@ app.post('/api/articles', async (request, response) => {
 /**
  * Update Article
  */
-app.put('/api/articles/:id', async (request, response) => {
+app.put('/api/articles/:slug', async (request, response) => {
   try {
-    const id = Number(request.params.id);
-    console.log(id);
-    const body = request.body;
+    const slug = request.params.slug;
+    const receiveBody = request.body.article;
+
+    const findArticle = await db.collection('articles').findOne({ 'article.slug': slug });
     const article = {
-      _id: id,
-      article: body.article,
+      _id: findArticle._id,
+      article: {
+        ...findArticle.article,
+        ...receiveBody,
+        slug: receiveBody.title.replaceAll(' ', '-'),
+        updatedAt: new Date(),
+      },
     };
-    await db.collection('articles').findOneAndReplace({ _id: id }, article);
+
+    await db.collection('articles').findOneAndReplace({ 'article.slug': slug }, article);
     response.send(article);
   } catch (err) {
     response.send(500);
@@ -204,12 +219,61 @@ app.put('/api/articles/:id', async (request, response) => {
 /**
  * Delete Article
  */
-app.delete('/api/articles/:id', async (request, response) => {
+app.delete('/api/articles/:slug', async (request, response) => {
   try {
-    const id = Number(request.params.id);
-    await db.collection('articles').findOneAndDelete({ _id: id });
+    const slug = request.params.slug;
+    await db.collection('articles').findOneAndDelete({ 'article.slug': slug });
     response.send('Success');
   } catch (err) {
     response.send(500);
   }
 });
+
+// /**
+//  * Get Article
+//  */
+// app.get('/api/articles/:id', async (request, response) => {
+//   try {
+//     const id = Number(request.params.id);
+//     const article = await db.collection('articles').findOne({ _id: id });
+//     response.send({ result: article });
+//   } catch (err) {
+//     response.send(500);
+//   }
+// });
+
+// /**
+//  * Update Article
+//  */
+// app.put('/api/articles/:id', async (request, response) => {
+//   try {
+//     const id = Number(request.params.id);
+//     const body = request.body;
+//     const findArticle = await db.collection('articles').findOne({ _id: id });
+//     const article = {
+//       _id: id,
+//       article: {
+//         ...findArticle.article,
+//         ...body.article,
+//         updatedAt: new Date(),
+//       },
+//     };
+//     await db.collection('articles').findOneAndReplace({ _id: id }, article);
+//     response.send(article);
+//   } catch (err) {
+//     response.send(500);
+//   }
+// });
+
+// /**
+//  * Delete Article
+//  */
+//  app.delete('/api/articles/:id', async (request, response) => {
+//     try {
+//       const id = Number(request.params.id);
+//       await db.collection('articles').findOneAndDelete({ _id: id });
+//       response.send('Success');
+//     } catch (err) {
+//       response.send(500);
+//     }
+//   });
