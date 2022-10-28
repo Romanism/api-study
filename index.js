@@ -150,7 +150,7 @@ app.get('/api/articles/feed', async (request, response) => {
 });
 
 /**
- * Get Article Slug
+ * Get Article
  */
 app.get('/api/articles/:slug', async (request, response) => {
   try {
@@ -229,6 +229,85 @@ app.delete('/api/articles/:slug', async (request, response) => {
   }
 });
 
+/**
+ * Add Comments to an Article
+ */
+app.post('/api/articles/:slug/comments', async (request, response) => {
+  try {
+    const slug = request.params.slug;
+    const receiveBody = request.body.comment;
+
+    const findArticle = await db.collection('articles').findOne({ 'article.slug': slug });
+    const comments = findArticle.article.comments;
+    let commentId;
+    let commentList;
+    let commentBody = {
+      id: 0,
+      ...receiveBody,
+      createAt: new Date(),
+      updatedAt: new Date(),
+    };
+
+    if (!comments || comments.length < 1) {
+      commentId = 1;
+      commentList = [{ ...commentBody, id: 1 }];
+    } else {
+      commentId = comments[comments.length - 1].id + 1;
+      commentList = [...comments, { ...commentBody, id: commentId }];
+    }
+
+    const article = {
+      _id: findArticle._id,
+      article: {
+        ...findArticle.article,
+        ...receiveBody,
+        comments: commentList,
+      },
+    };
+
+    await db.collection('articles').findOneAndReplace({ 'article.slug': slug }, article);
+    response.send(article);
+  } catch (err) {
+    response.send(500);
+  }
+});
+
+/**
+ * Get Comments from an Article
+ */
+app.get('/api/articles/:slug/comments', async (request, response) => {
+  try {
+    const slug = request.params.slug;
+    const article = await db.collection('articles').findOne({ 'article.slug': slug });
+    response.send({ result: article.article.comments || [] });
+  } catch (err) {
+    response.send(500);
+  }
+});
+
+/**
+ * Delete Comment
+ */
+app.delete('/api/articles/:slug/comment/:id', async (request, response) => {
+  try {
+    const slug = request.params.slug;
+    const id = Number(request.params.id);
+    const findArticle = await db.collection('articles').findOne({ 'article.slug': slug });
+    const comments = findArticle.article.comments;
+    const article = {
+      _id: findArticle._id,
+      article: {
+        ...findArticle.article,
+        comments: comments.filter((comment) => comment.id !== id),
+      },
+    };
+
+    await db.collection('articles').findOneAndReplace({ 'article.slug': slug }, article);
+    response.send('Success');
+  } catch (err) {
+    response.send(500);
+  }
+});
 // /**
 //  * Get Article
 //  */
