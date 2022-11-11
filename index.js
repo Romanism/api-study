@@ -308,6 +308,56 @@ app.delete('/api/articles/:slug/comment/:id', async (request, response) => {
     response.send(500);
   }
 });
+
+/**
+ * Favorite Article
+ */
+app.post('/api/articles/:slug/favorite', async (request, response) => {
+  try {
+    const slug = request.params.slug;
+    const findArticle = await db.collection('articles').findOne({ 'article.slug': slug });
+    const article = {
+      _id: findArticle._id,
+      article: {
+        ...findArticle.article,
+        favorited: true,
+      },
+    };
+    await db.collection('articles').findOneAndReplace({ 'article.slug': slug }, article);
+    response.send(article);
+  } catch (err) {
+    response.send(500);
+  }
+});
+
+/**
+ * Unfavorite Article
+ */
+app.delete('/api/articles/:slug/favorite', async (request, response) => {
+  try {
+    const slug = request.params.slug;
+    const findArticle = await db.collection('articles').findOne({ 'article.slug': slug });
+    const article = {
+      _id: findArticle._id,
+      article: {
+        ...findArticle.article,
+        favorited: false,
+      },
+    };
+    await db.collection('articles').findOneAndReplace({ 'article.slug': slug }, article);
+    response.send(article);
+  } catch (err) {
+    response.send(500);
+  }
+});
+
+/**
+ * Get Tags
+ */
+app.get('/api/tags', async (request, response) => {
+  response.send(['reactjs', 'angularjs']);
+});
+
 // /**
 //  * Get Article
 //  */
