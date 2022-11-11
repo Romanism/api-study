@@ -266,7 +266,7 @@ app.post('/api/articles/:slug/comments', async (request, response) => {
     };
 
     await db.collection('articles').findOneAndReplace({ 'article.slug': slug }, article);
-    response.send(article);
+    response.send(commentList[commentList.length - 1]);
   } catch (err) {
     response.send(500);
   }
