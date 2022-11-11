@@ -129,9 +129,35 @@ app.delete('/api/profiles/:username/follow', function (request, response) {
  */
 app.get('/api/articles', async (request, response) => {
   try {
-    console.log(`Query : ${JSON.stringify(request.query)}`);
-    const article = await db.collection('articles').find().toArray();
-    response.send({ result: article });
+    const tag = request.query.tag;
+    const offset = request.query.offset;
+    const limit = request.query.limit;
+
+    const articles = await db.collection('articles').find().toArray();
+    let filterArticles = [];
+
+    if (tag) {
+      for (let i = 0; i < articles.length; i++) {
+        const tagList = articles[i].article.tagList;
+        const tagIndex = tagList.findIndex((t) => t === tag);
+        if (tagIndex > -1) {
+          filterArticles.push(articles[i]);
+        }
+      }
+    } else {
+      filterArticles = articles;
+    }
+
+    if (offset && limit) {
+      const offsetArticles = filterArticles.filter((article, index) => index % offset === 0);
+      filterArticles = offsetArticles.slice(0, limit);
+    } else if (offset && !limit) {
+      filterArticles = filterArticles.filter((article, index) => index % offset === 0);
+    } else if (!offset && limit) {
+      filterArticles = filterArticles.slice(0, limit);
+    }
+
+    response.send({ count: filterArticles.length, result: filterArticles });
   } catch (err) {
     response.send(500);
   }
@@ -142,8 +168,24 @@ app.get('/api/articles', async (request, response) => {
  */
 app.get('/api/articles/feed', async (request, response) => {
   try {
-    const article = await db.collection('articles').find().toArray();
-    response.send({ result: article });
+    const offset = request.query.offset;
+    const limit = request.query.limit;
+
+    const articles = await db.collection('articles').find().toArray();
+    let filterArticles;
+
+    if (offset && limit) {
+      const offsetArticles = articles.filter((article, index) => index % offset === 0);
+      filterArticles = offsetArticles.slice(0, limit);
+    } else if (offset && !limit) {
+      filterArticles = articles.filter((article, index) => index % offset === 0);
+    } else if (!offset && limit) {
+      filterArticles = articles.slice(0, limit);
+    } else {
+      filterArticles = articles;
+    }
+
+    response.send({ count: filterArticles.length, result: filterArticles });
   } catch (err) {
     response.send(500);
   }
