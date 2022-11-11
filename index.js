@@ -130,8 +130,8 @@ app.delete('/api/profiles/:username/follow', function (request, response) {
 app.get('/api/articles', async (request, response) => {
   try {
     const tag = request.query.tag;
-    const offset = request.query.offset;
-    const limit = request.query.limit;
+    const offset = request.query.offset || 0;
+    const limit = request.query.limit || 20;
 
     const articles = await db.collection('articles').find().toArray();
     let filterArticles = [];
@@ -148,15 +148,7 @@ app.get('/api/articles', async (request, response) => {
       filterArticles = articles;
     }
 
-    if (offset && limit) {
-      const offsetArticles = filterArticles.filter((article, index) => index % offset === 0);
-      filterArticles = offsetArticles.slice(0, limit);
-    } else if (offset && !limit) {
-      filterArticles = filterArticles.filter((article, index) => index % offset === 0);
-    } else if (!offset && limit) {
-      filterArticles = filterArticles.slice(0, limit);
-    }
-
+    filterArticles = filterArticles.splice(offset, limit);
     response.send({ count: filterArticles.length, result: filterArticles });
   } catch (err) {
     response.send(500);
@@ -168,23 +160,12 @@ app.get('/api/articles', async (request, response) => {
  */
 app.get('/api/articles/feed', async (request, response) => {
   try {
-    const offset = request.query.offset;
-    const limit = request.query.limit;
+    const offset = request.query.offset || 0;
+    const limit = request.query.limit || 20;
 
     const articles = await db.collection('articles').find().toArray();
-    let filterArticles;
 
-    if (offset && limit) {
-      const offsetArticles = articles.filter((article, index) => index % offset === 0);
-      filterArticles = offsetArticles.slice(0, limit);
-    } else if (offset && !limit) {
-      filterArticles = articles.filter((article, index) => index % offset === 0);
-    } else if (!offset && limit) {
-      filterArticles = articles.slice(0, limit);
-    } else {
-      filterArticles = articles;
-    }
-
+    let filterArticles = articles.splice(offset, limit);
     response.send({ count: filterArticles.length, result: filterArticles });
   } catch (err) {
     response.send(500);
